@@ -1,6 +1,6 @@
 ---
 name: ad-copy-generator
-description: "Generate high-converting Meta ad copy matched to specific image creatives. Analyzes visuals, writes copy that reinforces the image, cross-references account performance data, and outputs asset_feed_spec-ready variants."
+description: "Generate high-converting Meta ad copy matched to specific image creatives. Analyzes visuals, writes copy that reinforces the image, cross-references account performance data through the official Ads CLI adapter when available, and outputs payload-ready variants."
 metadata:
   openclaw:
     emoji: "✍️"
@@ -8,7 +8,8 @@ metadata:
     homepage: https://github.com/TheMattBerman/meta-ads-kit
     requires:
       env:
-        - FACEBOOK_ACCESS_TOKEN
+        - ACCESS_TOKEN
+        - AD_ACCOUNT_ID
 ---
 
 # Ad Copy Generator
@@ -51,22 +52,22 @@ Before writing, check for existing copy:
 Before writing a single word, look at the account. What copy is converting?
 
 ```bash
-# Top performers by CTR — last 30 days
-curl -s "https://graph.facebook.com/v22.0/ACT_ID/insights?\
-level=ad&fields=ad_name,impressions,clicks,ctr,cpc,cost_per_action_type\
-&date_preset=last_30d&sort=ctr_descending&limit=20\
-&access_token=$FACEBOOK_ACCESS_TOKEN"
+# Top performers by CTR — last 30 days through official Ads CLI
+meta --output json --no-input ads insights get \
+  --date-preset last_30d \
+  --fields spend,impressions,clicks,ctr,cpc,reach \
+  --sort ctr_descending \
+  --limit 20
 ```
 
-Then pull copy from winners:
+For creative details, prefer official CLI resources where supported:
 
 ```bash
-# Get creative ID from the ad
-curl -s "https://graph.facebook.com/v22.0/AD_ID?fields=creative{id}&access_token=$FACEBOOK_ACCESS_TOKEN"
-
-# Get the actual copy
-curl -s "https://graph.facebook.com/v22.0/CREATIVE_ID?fields=asset_feed_spec&access_token=$FACEBOOK_ACCESS_TOKEN"
+meta --output json --no-input ads ad get AD_ID
+meta --output json --no-input ads creative get CREATIVE_ID
 ```
+
+If official CLI does not expose a needed creative field yet, use direct Graph API only as an explicit fallback.
 
 **Extract patterns:**
 - Headline length and structure (questions? numbers? commands?)

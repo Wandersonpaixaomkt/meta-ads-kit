@@ -1,65 +1,77 @@
 # Meta Ads Copilot — Setup Guide
 
-Get your AI ad manager running in 10 minutes.
+Get the local Meta Ads operator running safely in mock mode first, then read-only mode.
 
 ---
 
-## Step 1: Install social-cli
+## Step 1: Install the official Meta Ads CLI
 
-social-cli is the open-source engine that talks to the Meta Marketing API.
+Meta's official Ads CLI is published as the Python package `meta-ads`.
+
+Requirements:
+- Python 3.12+
+- `pip`
+- `uv` recommended
 
 ```bash
-npm install -g @vishalgojha/social-cli
+pip install meta-ads
+# or run without global install:
+uvx --python 3.12 --from meta-ads meta --help
 ```
 
-Verify it's installed:
-```bash
-social --version
-```
-
----
-
-## Step 2: Authenticate with Meta
+Verify:
 
 ```bash
-social auth login
-```
-
-This opens your browser to authorize with Meta. You need:
-- A Facebook account with access to your ad account
-- Permission to read ad insights (most ad account admins have this)
-
-### Advanced: Using a Meta App
-
-If you have a Meta developer app:
-
-```bash
-social auth set-app --app-id YOUR_APP_ID --app-secret YOUR_APP_SECRET
-social auth login --scopes ads_read,ads_management,read_insights
+meta --help
+meta ads --help
+meta ads campaign list --help
+meta ads insights get --help
 ```
 
 ---
 
-## Step 3: Set Your Ad Account
+## Step 2: Start in mock mode
 
-List your available ad accounts:
 ```bash
-social marketing accounts
+cp .env.example .env
+cp ad-config.example.json ad-config.json
+META_KIT_MODE=mock ./scripts/meta-kit.sh doctor
+META_KIT_MODE=mock ./run.sh daily-check
 ```
 
-Set the default:
-```bash
-social marketing set-default-account act_YOUR_ACCOUNT_ID
-```
-
-Or set via environment variable:
-```bash
-export META_AD_ACCOUNT=act_YOUR_ACCOUNT_ID
-```
+Mock mode uses local fixtures only. It does not call Meta.
 
 ---
 
-## Step 4: Configure Benchmarks
+## Step 3: Configure official Ads CLI auth for read-only use
+
+Ads CLI authenticates with a Meta **admin system user access token**.
+
+Create a system user in Meta Business Suite, assign the needed assets, generate a token, then set:
+
+```bash
+ACCESS_TOKEN=<SYSTEM_USER_ACCESS_TOKEN>
+AD_ACCOUNT_ID=act_YOUR_ACCOUNT_ID
+BUSINESS_ID=<OPTIONAL_BUSINESS_ID>
+```
+
+Minimum read-only scopes for monitoring:
+- `ads_read`
+- `read_insights`
+
+Additional scopes are needed only for management/catalog/page workflows:
+- `ads_management`
+- `business_management`
+- `pages_show_list`
+- `pages_read_engagement`
+- `pages_manage_ads`
+- `catalog_management`
+
+Never commit `.env`, `.env.*.local`, tokens, or secrets.
+
+---
+
+## Step 4: Configure benchmarks
 
 ```bash
 cp ad-config.example.json ad-config.json
@@ -83,43 +95,57 @@ Edit `ad-config.json` with your targets:
 }
 ```
 
-**Don't know your benchmarks?** Leave the defaults — the agent will learn them from your data.
-
 ---
 
-## Step 5: Test It
+## Step 5: Run read-only reports
+
+After auth is configured:
 
 ```bash
-chmod +x run.sh
-./run.sh daily-check
+META_KIT_MODE=read-only ./scripts/meta-kit.sh doctor
+META_KIT_MODE=read-only ./run.sh campaigns
+META_KIT_MODE=read-only ./run.sh overview --preset last_7d
+META_KIT_MODE=read-only ./run.sh daily-check
 ```
 
-You should see the 5 Daily Questions with your actual ad data.
+The adapter writes sanitized read-only snapshots under `local/outputs/read-only/`.
 
 ---
 
-## Step 6 (Optional): Run With OpenClaw
+## Mutations: approval-only
+
+Mutating work is blocked by default.
+
+Rules:
+- default mode is `mock`
+- read-only mode cannot mutate
+- live mutation requires `META_KIT_MODE=live-approved`
+- live mutation requires `META_KIT_APPROVAL_ID`
+- creates must be `PAUSED`
+- deletes remain unsupported in v1
+- every proposed mutation writes a dry-run artifact first
+
+Dry-run example:
 
 ```bash
-# Install OpenClaw if you haven't
-npm install -g openclaw
+META_KIT_MODE=mock ./scripts/meta-kit.sh create-ad --payload examples/create-ad.json --dry-run
+```
 
-# Start the agent
+---
+
+## Run With OpenClaw
+
+```bash
+npm install -g openclaw
 cd meta-ads-kit
 openclaw start
 ```
 
-Now message the agent naturally:
+Ask naturally:
 - "How are my ads doing?"
 - "Any bleeders?"
 - "Daily check"
-
-### Automate Morning Briefings
-
-Tell the agent:
-> "Run my daily ads check every morning at 8am and send me the summary"
-
-It'll set up a cron job and message you each morning with findings.
+- "Check for fatigue"
 
 ---
 
@@ -127,28 +153,15 @@ It'll set up a cron job and message you each morning with findings.
 
 | Problem | Fix |
 |---------|-----|
-| `social: command not found` | Run `npm install -g @vishalgojha/social-cli` |
-| Authentication fails | Try `social auth login` again, check browser popup |
-| "No ad accounts found" | Make sure your Facebook user has ad account access |
-| No data returned | Check that campaigns have been running in the selected time period |
-| Rate limited | Wait a few minutes and retry |
+| `meta: command not found` | Install `meta-ads` or use `uvx --python 3.12 --from meta-ads meta ...` |
+| Python version error | Use Python 3.12+ |
+| `ACCESS_TOKEN` missing | Add a system user token to `.env` or environment |
+| `AD_ACCOUNT_ID` missing | Set `AD_ACCOUNT_ID=act_...` |
+| No data returned | Confirm campaigns ran during the selected date range |
+| Rate limited | Wait and retry; use narrower reports |
 
-### Check Everything
+Check everything:
 
 ```bash
-social doctor
+./scripts/meta-kit.sh doctor
 ```
-
-This runs diagnostics on your social-cli setup.
-
----
-
-## Permissions Needed
-
-| Permission | Required For |
-|-----------|-------------|
-| `ads_read` | Reading campaign data, insights |
-| `ads_management` | Pausing/resuming ads, budget changes |
-| `read_insights` | Performance metrics |
-
-`ads_read` + `read_insights` are enough for monitoring only. Add `ads_management` if you want the agent to take action.

@@ -18,7 +18,7 @@ This kit automates your entire Meta Ads workflow:
 - **Spot winners** — Top performers ready to scale
 - **Detect fatigue** — CTR declining, frequency climbing, CPC rising
 - **Generate copy** — AI writes ad copy matched to your actual image creatives
-- **Upload to Meta** — Push new ads straight to your account via Graph API
+- **Upload to Meta** — Prepare/upload ads through official CLI-first workflows where supported
 - **Pixel + CAPI audit** — Audit your tracking setup, test server-side events, optimize for 9.3+ Event Match Quality
 - **Take action** — Pause, resume, adjust budgets (always with your approval)
 
@@ -44,21 +44,18 @@ I'm open-sourcing this because every founder running Meta ads deserves a copilot
 git clone https://github.com/themattberman/meta-ads-kit.git
 cd meta-ads-kit
 
-# Install social-cli (the engine under the hood)
-npm install -g @vishalgojha/social-cli
+# Install Meta's official Ads CLI (Python 3.12+)
+pip install meta-ads
+# or use uvx without global install:
+uvx --python 3.12 --from meta-ads meta --help
 
-# Authenticate with Meta
-social auth login
-
-# Set your default ad account
-social marketing accounts
-social marketing set-default-account act_YOUR_ACCOUNT_ID
-
-# Copy config
+# Copy config and start safely in mock mode
 cp .env.example .env
 cp ad-config.example.json ad-config.json
+META_KIT_MODE=mock ./scripts/meta-kit.sh doctor
+META_KIT_MODE=mock ./run.sh daily-check
 
-# Edit ad-config.json with your benchmarks
+# For real read-only reports, set ACCESS_TOKEN + AD_ACCOUNT_ID in .env
 ```
 
 See [SETUP.md](SETUP.md) for detailed instructions.
@@ -96,7 +93,7 @@ openclaw start
 | `ad-creative-monitor` | Track creative performance over time, detect fatigue before it kills your ROAS |
 | `budget-optimizer` | Analyze spend efficiency, recommend budget shifts between campaigns/adsets |
 | `ad-copy-generator` | Generate ad copy matched to specific image creatives — analyzes the visual, writes copy that reinforces it, outputs `asset_feed_spec`-ready variants |
-| `ad-upload` | Push images and copy straight to Meta via Graph API -- no Ads Manager copy-paste required |
+| `ad-upload` | Prepare official CLI-first creative/ad upload payloads with PAUSED-only, dry-run-first guardrails |
 | `pixel-capi` | Audit Meta Pixel + Conversions API setup, test server-side events, optimize Event Match Quality to 9.3+. Platform guides for Next.js, Shopify, WordPress, Webflow, GHL, ClickFunnels |
 
 Each skill can run standalone or as part of the daily routine.
@@ -107,7 +104,7 @@ The five skills chain together into a closed loop:
 
 ```
 Monitor (meta-ads) → Detect fatigue (ad-creative-monitor) → Shift budget (budget-optimizer)
-    → Generate new copy (ad-copy-generator) → Upload to Meta (ad-upload) → Monitor again
+    → Generate new copy (ad-copy-generator) → Prepare/upload PAUSED ads (ad-upload) → Monitor again
 
 Pixel + CAPI (pixel-capi) runs alongside: audit tracking, test server events, optimize EMQ
 ```
@@ -121,7 +118,7 @@ No Ads Manager required at any step.
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
 │  Daily Check │───▶│   Patterns   │───▶│    Budget     │───▶│  Copy Gen    │───▶│   Upload     │
-│  (5 questions│    │  & Fatigue   │    │  Optimizer    │    │  (per image) │    │  (Graph API) │
+│  (5 questions│    │  & Fatigue   │    │  Optimizer    │    │  (per image) │    │ (Ads CLI)    │
 └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
        │                   │                   │                   │                   │
        ▼                   ▼                   ▼                   ▼                   ▼
@@ -138,7 +135,7 @@ No Ads Manager required at any step.
 **When you need new creatives:**
 1. Generate copy matched to specific image creatives
 2. Review the variants
-3. Upload directly to Meta — images, copy, and all
+3. Prepare a dry-run upload/create payload; approve before anything reaches Meta
 
 **You (2 minutes over coffee):**
 1. Read the summary
@@ -149,7 +146,7 @@ No Ads Manager required at any step.
 
 ## Running With OpenClaw
 
-This kit is built for [OpenClaw](https://openclaw.ai), an open-source AI agent framework.
+This kit is built for [OpenClaw](https://openclaw.ai), an open-source AI agent framework. Under the hood, reports route through `./run.sh` → `scripts/meta-kit.sh` → Meta's official Ads CLI (`meta`).
 
 ```bash
 # Install OpenClaw
@@ -169,7 +166,7 @@ Then just message it naturally:
 - "Show me performance by age and gender"
 - "Pause ad 12345678"
 
-The agent handles the orchestration, interprets the data, and asks before taking any action.
+The agent handles orchestration, interprets the data, and asks before taking any spend-impacting action.
 
 ### Automate It
 
@@ -221,7 +218,7 @@ Or just tell the OpenClaw agent your benchmarks conversationally — it'll figur
 
 | Tool | Monthly Cost |
 |------|-------------|
-| social-cli | Free (open source) |
+| Official Meta Ads CLI (`meta-ads`) | Free |
 | Meta API | Free (your own ad account) |
 | OpenClaw | Free (open source) |
 | **Total** | **$0/mo** |
@@ -236,15 +233,16 @@ Your Meta ad spend is separate — this kit just helps you manage it smarter.
 meta-ads-kit/
 ├── README.md              # You're here
 ├── SETUP.md               # Detailed setup guide
-├── run.sh                 # Report runner
+├── run.sh                 # Local adapter command router
+├── scripts/               # meta-kit dispatcher, CLI wrapper, safety guards, fixtures
 ├── .env.example           # Environment template
 ├── ad-config.example.json # Benchmarks template
 ├── skills/
-│   ├── meta-ads/             # Core reporting & actions
+│   ├── meta-ads/             # Core reporting & recommendations
 │   ├── ad-creative-monitor/  # Creative fatigue tracking
 │   ├── budget-optimizer/     # Spend efficiency analysis
 │   ├── ad-copy-generator/    # AI copy matched to image creatives
-│   ├── ad-upload/            # Push ads to Meta via Graph API
+│   ├── ad-upload/            # Upload/create payload prep and guardrails
 │   └── pixel-capi/           # Pixel + CAPI audit, testing, EMQ optimization
 │       ├── scripts/          # pixel-audit, pixel-setup, capi-test, capi-send, emq-check
 │       └── references/       # Complete pixel + CAPI knowledge base
@@ -261,7 +259,7 @@ This is open source. PRs welcome.
 
 Ideas for contribution:
 
-- Google Ads support (social-cli may add this)
+- Google Ads support via a separate adapter
 - Creative performance dashboards
 - Automated A/B test analysis
 - Multi-account agency mode
