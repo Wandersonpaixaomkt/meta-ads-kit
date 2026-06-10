@@ -6,7 +6,7 @@ metadata:
     emoji: "😴"
     user-invocable: true
     requires:
-      tools: ["social"]
+      tools: ["bash"]
       env: []
 ---
 
@@ -32,14 +32,8 @@ This skill watches for those signals daily and flags creatives that need rotatio
 ### The Check
 
 ```bash
-# Run fatigue check
-./scripts/creative-monitor.sh fatigue-check
-
-# Track specific ad over time
-./scripts/creative-monitor.sh track-ad AD_ID
-
-# Weekly creative health report
-./scripts/creative-monitor.sh weekly-report
+# Run fatigue check (mock/read-only via local adapter)
+./run.sh fatigue
 ```
 
 ---
@@ -74,7 +68,7 @@ Or: "Which ads need fresh creative?"
 
 ## Invocation
 
-1. Pull ad-level insights with daily time increment (`--time-increment 1`)
+1. Pull ad-level insights with daily time increment via `./scripts/meta-kit.sh`
 2. Calculate day-over-day CTR, CPC, and frequency trends
 3. Flag any ad showing fatigue signals
 4. Compare against benchmarks in `ad-config.json`

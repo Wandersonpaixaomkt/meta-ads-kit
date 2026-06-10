@@ -6,7 +6,7 @@ metadata:
     emoji: "💰"
     user-invocable: true
     requires:
-      tools: ["social"]
+      tools: ["bash"]
       env: []
 ---
 
@@ -48,13 +48,10 @@ Or: "Check spend pacing"
 
 ```bash
 # Efficiency ranking
-./scripts/budget-optimizer.sh efficiency [--account act_123] [--preset last_7d]
-
-# Budget recommendations
-./scripts/budget-optimizer.sh recommend [--account act_123]
+./run.sh efficiency [--account act_123] [--preset last_7d]
 
 # Spend pacing check
-./scripts/budget-optimizer.sh pacing [--account act_123]
+./run.sh pacing [--account act_123]
 ```
 
 ---
