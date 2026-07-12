@@ -1,0 +1,14 @@
+# Meta Ads MCP oficial para Codex/ChatGPT Desktop/IDE.
+# O projeto precisa ser marcado como confiável para carregar esta configuração.
+
+[mcp_servers.meta_ads]
+url = "https://mcp.facebook.com/ads"
+auth = "oauth"
+enabled = true
+required = false
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+
+# Consultas e análises podem rodar normalmente.
+# Ações de escrita, como pausar anúncios ou alterar orçamento, exigem aprovação.
+default_tools_approval_mode = "writes"
